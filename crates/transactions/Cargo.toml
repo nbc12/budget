@@ -1,0 +1,19 @@
+[package]
+name = "transactions"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+database = { workspace = true }
+common = { workspace = true }
+categories = { workspace = true }
+cards = { path = "../cards" }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+askama = { workspace = true }
+sqlx = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+validator = { workspace = true }
+chrono = { workspace = true }

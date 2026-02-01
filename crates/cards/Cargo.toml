@@ -1,0 +1,16 @@
+[package]
+name = "cards"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+database = { workspace = true }
+common = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+askama = { workspace = true }
+sqlx = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+validator = { workspace = true }
