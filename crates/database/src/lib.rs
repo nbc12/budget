@@ -1,9 +1,12 @@
 use sqlx::sqlite::{SqlitePool, SqlitePoolOptions, SqliteConnectOptions};
 use sqlx::{Transaction, Sqlite};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub use sqlx::Error;
 pub use sqlx::Result;
+
+static TEST_DB_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 // --- Driver Adapter Pattern ---
 pub type Driver = Sqlite;
@@ -69,7 +72,7 @@ impl Database {
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running migrations...");
-        sqlx::migrate!("./migrations")
+        sqlx::migrate!("../../migrations")
             .run(&self.pool)
             .await?;
         println!("Migrations complete.");
@@ -80,7 +83,7 @@ impl Database {
         let tx = self.pool.begin().await?;
         Ok(UnitOfWork { tx })
     }
-}
+} 
 
 pub struct UnitOfWork<'a> {
     tx: Transaction<'a, Driver>,
@@ -97,14 +100,20 @@ impl<'a> UnitOfWork<'a> {
     }
 }
 
-#[cfg(test)]
+// do not add #[cfg(test)] here because it hides this method from libraries.
 pub async fn get_test_db() -> Database {
-    let options = SqliteConnectOptions::new()
-        .filename(":memory:")
-        .create_if_missing(true)
-        .shared_cache(true);
+    use std::time::{SystemTime, UNIX_EPOCH};
+    
+    // Create a unique database file in the temp directory for each test
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let db_path = std::env::temp_dir().join(format!("test_budget_{}.db", now));
+    let connection_string = format!("sqlite:{}", db_path.display());
+
+    let options = SqliteConnectOptions::from_str(&connection_string).unwrap()
+        .create_if_missing(true);
         
     let pool = SqlitePoolOptions::new()
+        .max_connections(1) // Single connection is safer for SQLite tests
         .connect_with(options)
         .await
         .expect("Failed to create test database pool");

@@ -44,7 +44,6 @@ pub struct MonthViewTemplate {
 
 pub struct FinancialOverview {
     pub total_income: String,
-    pub tithing: String,
     pub total_expenses: String,
     pub net_balance: String,
     pub net_is_positive: bool,
@@ -58,8 +57,11 @@ pub struct BudgetRowView {
     pub limit_dollars: String,
     pub spent_dollars: String,
     pub remaining_dollars: String,
+    pub percent_spent: String,
+    pub percent_remaining: String,
     pub is_over_budget: bool,
     pub is_income: bool,
+    pub is_active: bool,
 }
 
 pub struct VirtualCategoryView {
@@ -154,7 +156,8 @@ async fn get_month_view(
     let mut enriched_budget_rows = Vec::new();
     let mut transactions_for_virtual = Vec::new();
 
-    for mut view in budget_views {
+    for view_ref in &budget_views {
+        let mut view = view_ref.clone();
         let actual: i64 = if view.category.is_income {
             // For income, sum positive amounts
             transactions.iter()
@@ -180,6 +183,14 @@ async fn get_month_view(
             view.remaining = limit - actual;
         }
 
+        let (p_spent, p_rem) = if limit == 0 {
+            (0.0, 0.0)
+        } else {
+            let spent = (actual as f64 / limit as f64) * 100.0;
+            let rem = (view.remaining as f64 / limit as f64) * 100.0;
+            (spent, rem)
+        };
+
         enriched_budget_rows.push(BudgetRowView {
             category_id: view.category.id,
             category_name: view.category.name.clone(),
@@ -187,8 +198,11 @@ async fn get_month_view(
             limit_dollars: format!("{:.2}", limit as f64 / 100.0),
             spent_dollars: format!("{:.2}", actual as f64 / 100.0),
             remaining_dollars: format!("{:.2}", view.remaining as f64 / 100.0),
+            percent_spent: format!("{:.0}", p_spent),
+            percent_remaining: format!("{:.0}", p_rem),
             is_over_budget: if view.category.is_income { view.remaining < 0 } else { view.remaining < 0 }, // Both mean we are "behind" target
             is_income: view.category.is_income,
+            is_active: view.category.is_active,
         });
     }
 
@@ -253,14 +267,8 @@ async fn get_month_view(
         }
     }).collect();
 
-    let tithing_spent = enriched_budget_rows.iter()
-        .find(|r| r.category_name == "Tithing")
-        .map(|r| r.spent_dollars.clone())
-        .unwrap_or_else(|| "0.00".to_string());
-
     let overview = FinancialOverview {
         total_income: format!("{:.2}", summary.total_income as f64 / 100.0),
-        tithing: tithing_spent,
         total_expenses: format!("{:.2}", summary.total_expenses as f64 / 100.0),
         net_balance: format!("{:.2}", summary.net as f64 / 100.0),
         net_is_positive: summary.net >= 0,
@@ -270,6 +278,8 @@ async fn get_month_view(
         .map(|d| d.format("%B %Y").to_string())
         .unwrap_or_else(|_| params.month.clone());
 
+    let categories_for_template: Vec<categories::models::Category> = budget_views.into_iter().map(|v| v.category).collect();
+
     let template = MonthViewTemplate {
         month: params.month,
         month_display,
@@ -277,7 +287,7 @@ async fn get_month_view(
         budget_rows: enriched_budget_rows.clone(),
         virtual_rows,
         transactions: transaction_views,
-        categories: enriched_budget_rows.into_iter().map(|r| categories::models::Category { id: r.category_id, name: r.category_name, color: r.category_color, is_income: r.is_income, is_active: true }).collect(),
+        categories: categories_for_template,
         cards: all_cards,
     };
 

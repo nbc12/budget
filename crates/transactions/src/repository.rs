@@ -102,3 +102,96 @@ impl<'a> TransactionRepository<'a> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use database::get_test_db;
+
+    async fn setup_deps(conn: &mut database::Connection) -> (i64, i64) {
+        let cat_id: i64 = sqlx::query_scalar(
+            "INSERT INTO categories (name, color, is_income, is_active) VALUES ($1, $2, $3, $4) RETURNING id",
+        )
+        .bind("Test Cat")
+        .bind("#000")
+        .bind(false)
+        .bind(true)
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+
+        let card_id: i64 = sqlx::query_scalar(
+            "INSERT INTO cards (name, is_active) VALUES ($1, $2) RETURNING id",
+        )
+        .bind("Test Card")
+        .bind(true)
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+
+        (cat_id, card_id)
+    }
+
+    #[tokio::test]
+    async fn test_create_transaction() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let (cat_id, card_id) = setup_deps(uow.connection()).await;
+
+        let mut repo = TransactionRepository::new(uow.connection());
+        let req = CreateTransactionRequest::new(cat_id, Some(card_id), "2026-01-01".to_string(), 10.0, false, Some("Notes".into())).unwrap();
+        
+        let id = repo.create(&req).await.unwrap();
+        assert!(id > 0);
+
+        let t = repo.find_by_id(id).await.unwrap().unwrap();
+        assert_eq!(t.amount, -1000);
+        assert_eq!(t.notes, Some("Notes".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_read_transactions() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let (cat_id, card_id) = setup_deps(uow.connection()).await;
+
+        let mut repo = TransactionRepository::new(uow.connection());
+        let req = CreateTransactionRequest::new(cat_id, Some(card_id), "2026-01-01".to_string(), 10.0, false, None).unwrap();
+        repo.create(&req).await.unwrap();
+
+        let list = repo.list_by_month("2026-01").await.unwrap();
+        assert_eq!(list.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_update_transaction() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let (cat_id, card_id) = setup_deps(uow.connection()).await;
+
+        let mut repo = TransactionRepository::new(uow.connection());
+        let id = repo.create(&CreateTransactionRequest::new(cat_id, Some(card_id), "2026-01-01".to_string(), 10.0, false, None).unwrap()).await.unwrap();
+
+        let update_req = CreateTransactionRequest::new(cat_id, Some(card_id), "2026-01-02".to_string(), 20.0, true, Some("Updated".into())).unwrap();
+        repo.update(id, &update_req).await.unwrap();
+
+        let t = repo.find_by_id(id).await.unwrap().unwrap();
+        assert_eq!(t.amount, 2000);
+        assert_eq!(t.transaction_date, "2026-01-02");
+        assert_eq!(t.notes, Some("Updated".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_delete_transaction() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let (cat_id, card_id) = setup_deps(uow.connection()).await;
+
+        let mut repo = TransactionRepository::new(uow.connection());
+        let id = repo.create(&CreateTransactionRequest::new(cat_id, Some(card_id), "2026-01-01".to_string(), 10.0, false, None).unwrap()).await.unwrap();
+
+        assert!(repo.find_by_id(id).await.unwrap().is_some());
+        repo.delete(id).await.unwrap();
+        assert!(repo.find_by_id(id).await.unwrap().is_none());
+    }
+}

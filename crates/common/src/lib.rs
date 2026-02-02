@@ -21,3 +21,17 @@ pub struct Config {
     #[arg(long, env = "APP_PASSWORD")]
     pub app_password: Option<String>,
 }
+
+impl Config {
+    pub fn parse() -> Self {
+        let config = <Self as clap::Parser>::parse();
+        config.check_security();
+        config
+    }
+
+    fn check_security(&self) {
+        if self.app_password.is_none() {
+            tracing::warn!("APP_PASSWORD is not set! Authentication is DISABLED. The site will have NO login required.");
+        }
+    }
+}

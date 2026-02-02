@@ -81,7 +81,7 @@ impl CreateMonthlyBudgetRequest {
 }
 
 // Combined View Model for the UI
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct CategoryBudgetView {
     pub category: Category,
     pub budget: Option<MonthlyBudget>, // None if no limit set for this month
@@ -95,13 +95,13 @@ mod tests {
 
     #[test]
     fn test_create_category_request_valid() {
-        let req = CreateCategoryRequest::new("Groceries".to_string(), "#ffffff".to_string()).unwrap();
+        let req = CreateCategoryRequest::new("Groceries".to_string(), "#ffffff".to_string(), false).unwrap();
         assert_eq!(req.name, "Groceries");
         assert_eq!(req.color, "#ffffff");
     }
 
     #[test]
     fn test_create_category_request_empty() {
-        assert!(CreateCategoryRequest::new("   ".to_string(), "#ffffff".to_string()).is_err());
+        assert!(CreateCategoryRequest::new("   ".to_string(), "#ffffff".to_string(), false).is_err());
     }
 }

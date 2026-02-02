@@ -351,6 +351,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror",
+ "tokio",
  "tracing",
  "validator",
 ]
@@ -369,6 +370,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror",
+ "tokio",
  "tracing",
  "validator",
 ]
@@ -459,6 +461,7 @@ dependencies = [
  "serde",
  "sqlx",
  "tower-sessions",
+ "tracing",
 ]
 
 [[package]]
@@ -2613,6 +2616,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror",
+ "tokio",
  "tracing",
  "validator",
 ]

@@ -11,29 +11,19 @@
         .income { color: green; font-weight: bold; }
         .expense { color: red; font-weight: bold; }
         .stats-card { text-align: center; padding: 15px; border-radius: 10px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .chart-container { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; height: 300px; }
+        .chart-container { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; }
         .table-container { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; position: relative; }
         .section-header { margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .autocomplete-wrapper { position: relative; z-index: 1050; }
         .autocomplete-items { z-index: 9999 !important; }
-        /* Ensure table cells don't clip the dropdown */
         .table td, .table th { overflow: visible !important; position: relative; white-space: nowrap; }
         .notes-col { min-width: 80px; white-space: normal !important; }
-        .card-col { min-width: 80px; }
-        .category-col { min-width: 120px; }
-        .amount-col { min-width: 120px; }
         .sticky-bottom { z-index: 1020; }
         .editing-row { position: relative; z-index: 1060 !important; }
         
-        /* Hide number input arrows */
         input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
         
         @media (max-width: 768px) {
             .container { padding-left: 10px; padding-right: 10px; }
@@ -67,25 +57,19 @@
 
         <!-- Financial Overview Dashboard -->
         <div class="row g-2 mb-4">
-            <div class="col-6 col-md-3">
+            <div class="col-4">
                 <div class="stats-card">
                     <div class="text-muted small text-uppercase" style="font-size: 0.7rem;">Income</div>
                     <div class="h4 mb-0 income">${{ overview.total_income }}</div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="stats-card">
-                    <div class="text-muted small text-uppercase" style="font-size: 0.7rem;">Tithing</div>
-                    <div class="h4 mb-0 text-primary">${{ overview.tithing }}</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
+            <div class="col-4">
                 <div class="stats-card">
                     <div class="text-muted small text-uppercase" style="font-size: 0.7rem;">Expenses</div>
                     <div class="h4 mb-0 expense">${{ overview.total_expenses }}</div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-4">
                 <div class="stats-card">
                     <div class="text-muted small text-uppercase" style="font-size: 0.7rem;">Net</div>
                     <div class="h4 mb-0 {% if overview.net_is_positive %}income{% else %}expense{% endif %}">
@@ -95,7 +79,7 @@
             </div>
         </div>
 
-        <!-- Charts Section -->
+        <!-- Charts Row 1 -->
         <div class="row mb-4">
             <div class="col-md-8 mb-4">
                 <div class="chart-container" id="barChartContainer" style="height: auto;">
@@ -108,7 +92,8 @@
                 </div>
             </div>
         </div>
-        <!-- Budget Summary & Category Management -->
+
+        <!-- Budget Table -->
         <div class="section-header">
             <h2 class="h4 mb-0">Budget</h2>
         </div>
@@ -122,11 +107,12 @@
                             <th>Budget</th>
                             <th>Actual</th>
                             <th>Remaining</th>
-                            <th>Actions</th>
+                            <th style="width: 1%; white-space: nowrap;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in budget_rows %}
+                        {% if row.is_active %}
                         <tr class="category-row" data-category-id="{{ row.category_id }}" data-color="{{ row.category_color }}" data-is-income="{{ row.is_income }}">
                             <td><input type="checkbox" class="category-filter" value="{{ row.category_id }}" checked onchange="applyFilters()"></td>
                             <td>
@@ -141,15 +127,22 @@
                                            onkeydown="if(event.key==='Enter') this.blur()">
                                 </div>
                             </td>
-                            <td>${{ row.spent_dollars }}</td>
-                            <td>${{ row.remaining_dollars }}</td>
                             <td>
+                                ${{ row.spent_dollars }}
+                                <small class="text-muted" style="font-size: 0.75em;">({{ row.percent_spent }}%)</small>
+                            </td>
+                            <td>
+                                ${{ row.remaining_dollars }}
+                                <small class="text-muted" style="font-size: 0.75em;">({{ row.percent_remaining }}%)</small>
+                            </td>
+                            <td style="white-space: nowrap;">
                                 <div class="d-flex gap-1">
                                     <button class="btn btn-sm btn-outline-primary" onclick="editCategory({{ row.category_id }})">Edit</button>
                                     <button class="btn btn-sm btn-outline-danger" onclick="confirmDeleteCategory({{ row.category_id }})">Delete</button>
                                 </div>
                             </td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                     <tfoot class="table-info">
@@ -174,7 +167,7 @@
             </div>
         </div>
 
-        <!-- Transactions Table -->
+        <!-- Transactions Section -->
         <div class="section-header">
             <h2 class="h4 mb-0">Transactions</h2>
             <div class="d-flex align-items-center gap-2">
@@ -198,7 +191,7 @@
                             <th class="category-col">Category</th>
                             <th class="amount-col">Amount</th>
                             <th class="notes-col">Notes</th>
-                            <th>Actions</th>
+                            <th style="width: 1%; white-space: nowrap;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transaction-table-body">
@@ -220,9 +213,11 @@
                                 ${{ t.amount_dollars }}
                             </td>
                             <td class="notes-col">{{ t.notes }}</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="editRow({{ t.id }})">Edit</button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ t.id }})">Delete</button>
+                            <td style="white-space: nowrap;">
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editRow({{ t.id }})">Edit</button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ t.id }})">Delete</button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -253,15 +248,15 @@
             </div>
         </div>
 
-        <!-- Transaction Details Charts -->
+        <!-- Charts Row 2: Transaction Details -->
         <div class="row mb-4">
             <div class="col-md-6 mb-4">
-                <div class="chart-container">
+                <div class="chart-container" style="height: 350px;">
                     <canvas id="incomeTransPieChart"></canvas>
                 </div>
             </div>
             <div class="col-md-6 mb-4">
-                <div class="chart-container">
+                <div class="chart-container" style="height: 350px;">
                     <canvas id="expenseTransPieChart"></canvas>
                 </div>
             </div>
@@ -285,7 +280,7 @@
         </div>
     </div>
 
-    <!-- Manage Cards Modal (Simplified) -->
+    <!-- Manage Cards Modal -->
     <div class="modal fade" id="manageCardsModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -315,608 +310,44 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/public/js/autocomplete.js"></script>
+    <script src="/public/js/charts.js"></script>
+    <script src="/public/js/editing.js"></script>
+    <script src="/public/js/budget.js"></script>
     <script>
-        console.log("Budget script loading...");
-        const categories = [{% for c in categories %}{id: {{c.id}}, name: "{{c.name}}"}{% if !loop.last %},{% endif %}{% endfor %}];
+        // Data Bridge: Askama to JavaScript
+        const categories = [{% for c in categories %}{id: {{c.id}}, name: "{{c.name}}", is_active: {{c.is_active}} }{% if !loop.last %},{% endif %}{% endfor %}];
         const cards = [{% for c in cards %}{id: {{c.id}}, name: "{{c.name}}", is_active: {{c.is_active}} }{% if !loop.last %},{% endif %}{% endfor %}];
         const currentMonth = "{{ month }}";
-        const currentBudgetRows = [{% for r in budget_rows %}{id: {{r.category_id}}, name: "{{r.category_name}}", limit: {{r.limit_dollars}}, spent: {{r.spent_dollars}}, color: "{{r.category_color}}", is_income: {{r.is_income}} }{% if !loop.last %},{% endif %}{% endfor %}];
+        const currentBudgetRows = [{% for r in budget_rows %}{id: {{r.category_id}}, name: "{{r.category_name}}", limit: {{r.limit_dollars}}, spent: {{r.spent_dollars}}, color: "{{r.category_color}}", is_income: {{r.is_income}}, is_active: {{r.is_active}} }{% if !loop.last %},{% endif %}{% endfor %}];
         const allTransactions = [{% for t in transactions %}{ id: {{t.id}}, category_id: {{t.category_id}}, amount: {{t.amount_dollars}}, is_income: {{t.is_income}}, notes: "{{t.notes}}", category_name: "{{t.category_name}}", category_color: "{{t.category_color}}" }{% if !loop.last %},{% endif %}{% endfor %}];
-        
-        // Initialize Charts
-        let barChart, expensePieChart, incomeTransPieChart, expenseTransPieChart;
-        function initCharts() {
-            const labels = currentBudgetRows.map(r => r.name);
-            const limits = currentBudgetRows.map(r => r.limit);
-            const spent = currentBudgetRows.map(r => r.spent);
-            const colors = currentBudgetRows.map(r => r.color);
 
-            // Dynamically calculate height for bar chart
-            const BAR_THICKNESS = 18;
-            const HEIGHT_PER_CATEGORY = BAR_THICKNESS * 3; // Space for 2 bars + 1 bar width gap
-            const chartPadding = 100; // Room for title and axis
-            const dynamicHeight = Math.max(300, (labels.length * HEIGHT_PER_CATEGORY) + chartPadding);
-            document.getElementById('barChartContainer').style.height = dynamicHeight + 'px';
+        // Page-specific setup
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Autocomplete for the "Add" footer
+            try {
+                const activeCategories = categories.filter(c => c.is_active);
+                const activeCards = cards.filter(c => c.is_active);
+                console.log(`Initializing autocomplete: ${activeCategories.length} active categories, ${activeCards.length} active cards.`);
 
-            // Bar Chart: Budget vs Spent
-            barChart = new Chart(document.getElementById('budgetBarChart'), {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Budget',
-                            data: limits,
-                            backgroundColor: '#e9ecef', // Light Grey
-                            borderColor: '#adb5bd',
-                            borderWidth: 1,
-                            barThickness: BAR_THICKNESS
-                        },
-                        {
-                            label: 'Actual',
-                            data: spent,
-                            backgroundColor: colors, // Individual category colors
-                            borderColor: colors.map(c => c), // Solid version
-                            borderWidth: 1,
-                            barThickness: BAR_THICKNESS
-                        }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Budget vs Actual' }
-                    },
-                    scales: {
-                        x: { 
-                            beginAtZero: true,
-                            ticks: { maxTicksLimit: 5 }
-                        },
-                        y: { 
-                            stacked: false,
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-
-            // --- Category Distribution ---
-            const expenseData = currentBudgetRows.filter(r => !r.is_income && r.spent > 0);
-            expensePieChart = new Chart(document.getElementById('expensePieChart'), {
-                type: 'pie',
-                data: {
-                    labels: expenseData.map(r => r.name),
-                    datasets: [{
-                        data: expenseData.map(r => r.spent),
-                        backgroundColor: expenseData.map(r => r.color),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Expenses by Category' },
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
-                    }
-                }
-            });
-
-            // --- Transaction Distribution ---
-            const incomeTrans = allTransactions.filter(t => t.is_income);
-            incomeTransPieChart = new Chart(document.getElementById('incomeTransPieChart'), {
-                type: 'pie',
-                data: {
-                    labels: incomeTrans.map(t => `${t.category_name}: ${t.notes || 'Income'}`),
-                    datasets: [{
-                        data: incomeTrans.map(t => t.amount),
-                        backgroundColor: incomeTrans.map(t => t.category_color),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Individual Income Transactions' },
-                        legend: { display: false } // Hide legend for many transactions
-                    }
-                }
-            });
-
-            const expenseTrans = allTransactions.filter(t => !t.is_income);
-            expenseTransPieChart = new Chart(document.getElementById('expenseTransPieChart'), {
-                type: 'pie',
-                data: {
-                    labels: expenseTrans.map(t => `${t.category_name}: ${t.notes || 'Expense'}`),
-                    datasets: [{
-                        data: expenseTrans.map(t => t.amount),
-                        backgroundColor: expenseTrans.map(t => t.category_color),
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Individual Expense Transactions' },
-                        legend: { display: false } // Hide legend for many transactions
-                    }
-                }
-            });
-        }
-        initCharts();
-
-        // Restore Filter State from LocalStorage
-        function restoreFilters() {
-            const savedFilters = localStorage.getItem('checkedCategories');
-            if (savedFilters) {
-                const checkedIds = JSON.parse(savedFilters);
-                document.querySelectorAll('.category-filter').forEach(cb => {
-                    cb.checked = checkedIds.includes(parseInt(cb.value));
+                new Autocomplete(document.getElementById('add-category-input'), activeCategories, (item) => {
+                    document.getElementById('add-category-id').value = item ? item.id : "";
                 });
-                
-                // Update the "All" checkbox state
-                const allChecked = Array.from(document.querySelectorAll('.category-filter')).every(cb => cb.checked);
-                document.getElementById('filter-all').checked = allChecked;
-            }
-            applyFilters();
-        }
-        restoreFilters();
+                new Autocomplete(document.getElementById('add-card-input'), activeCards, (item) => {
+                    document.getElementById('add-card-id').value = item ? item.id : "";
+                });
+            } catch (e) { console.error("Autocomplete init failed:", e); }
 
-        let currentEditingRow = null; // { element: HTMLElement, originalHtml: string }
-        const pastelColors = [
-            "#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF", 
-            "#D5AAFF", "#FFABAB", "#85E3FF", "#E2F0CB", "#FDFD96",
-            "#FFC3A0", "#D4F0F0", "#CCE2CB", "#B6CFB6", "#97C1A9"
-        ];
-
-        function cancelPreviousEdit() {
-            if (currentEditingRow) {
-                currentEditingRow.element.innerHTML = currentEditingRow.originalHtml;
-                currentEditingRow.element.classList.remove('editing-row');
-                currentEditingRow = null;
-            }
-        }
-
-        // Basic Filtering
-        function applyFilters() {
-            const checkedIds = Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => parseInt(cb.value));
-            
-            // Save to LocalStorage
-            localStorage.setItem('checkedCategories', JSON.stringify(checkedIds));
-
-            document.querySelectorAll('#transaction-table-body tr').forEach(row => {
-                const catId = parseInt(row.dataset.category);
-                if(catId) row.style.display = checkedIds.includes(catId) ? '' : 'none';
-            });
-
-            // Update Charts
-            if (barChart && expensePieChart && incomeTransPieChart && expenseTransPieChart) {
-                const filteredRows = currentBudgetRows.filter(r => checkedIds.includes(r.id));
-                const filteredTrans = allTransactions.filter(t => checkedIds.includes(t.category_id));
-                
-                // Bar Chart
-                barChart.data.labels = filteredRows.map(r => r.name);
-                barChart.data.datasets[0].data = filteredRows.map(r => r.limit);
-                barChart.data.datasets[1].data = filteredRows.map(r => r.spent);
-                barChart.data.datasets[1].backgroundColor = filteredRows.map(r => r.color);
-                barChart.update();
-
-                // Category Expense Pie
-                const expenseData = filteredRows.filter(r => !r.is_income && r.spent > 0);
-                expensePieChart.data.labels = expenseData.map(r => r.name);
-                expensePieChart.data.datasets[0].data = expenseData.map(r => r.spent);
-                expensePieChart.data.datasets[0].backgroundColor = expenseData.map(r => r.color);
-                expensePieChart.update();
-
-                // Transaction Income Pie
-                const incomeTrans = filteredTrans.filter(t => t.is_income);
-                incomeTransPieChart.data.labels = incomeTrans.map(t => `${t.category_name}: ${t.notes || 'Income'}`);
-                incomeTransPieChart.data.datasets[0].data = incomeTrans.map(t => t.amount);
-                incomeTransPieChart.data.datasets[0].backgroundColor = incomeTrans.map(t => t.category_color);
-                incomeTransPieChart.update();
-
-                // Transaction Expense Pie
-                const expenseTrans = filteredTrans.filter(t => !t.is_income);
-                expenseTransPieChart.data.labels = expenseTrans.map(t => `${t.category_name}: ${t.notes || 'Expense'}`);
-                expenseTransPieChart.data.datasets[0].data = expenseTrans.map(t => t.amount);
-                expenseTransPieChart.data.datasets[0].backgroundColor = expenseTrans.map(t => t.category_color);
-                expenseTransPieChart.update();
-            }
-        }
-
-        function toggleAllFilters() {
-            const isChecked = document.getElementById('filter-all').checked;
-            document.querySelectorAll('.category-filter').forEach(cb => cb.checked = isChecked);
-            applyFilters();
-        }
-
-        function editCategory(id) {
-            const row = document.querySelector(`tr[data-category-id="${id}"]`);
-            const originalHtml = row.innerHTML;
-            cancelPreviousEdit();
-            currentEditingRow = { element: row, originalHtml: originalHtml };
-            
-            const nameCell = row.children[1];
-            const limitCell = row.children[2];
-            const actionsCell = row.children[5];
-
-            const currentName = nameCell.querySelector('.badge').innerText.trim();
-            const currentLimit = limitCell.querySelector('.limit-text').innerText.trim();
-            const currentColor = row.dataset.color;
-            const currentIsIncome = row.dataset.isIncome === 'true';
-
-            nameCell.innerHTML = `
-                <div class="d-flex flex-column gap-1">
-                    <div class="d-flex gap-1 align-items-center">
-                        <input type="text" class="form-control form-control-sm" id="edit-cat-name-${id}" value="${currentName}" style="min-width: 80px;">
-                        <select id="edit-cat-color-${id}" class="form-select form-select-sm" style="width: 45px; padding: 2px;">
-                            ${pastelColors.map(c => `<option value="${c}" ${c === currentColor ? 'selected' : ''} style="background-color: ${c};"></option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="edit-cat-is-income-${id}" ${currentIsIncome ? 'checked' : ''}>
-                        <label class="small mb-0" for="edit-cat-is-income-${id}">Income</label>
-                    </div>
-                </div>
-            `;
-            const colorSelect = document.getElementById(`edit-cat-color-${id}`);
-            colorSelect.style.backgroundColor = currentColor;
-            colorSelect.addEventListener('change', (e) => { e.target.style.backgroundColor = e.target.value; });
-
-            limitCell.innerHTML = `<input type="number" step="0.01" class="form-control form-control-sm" id="edit-cat-limit-${id}" value="${currentLimit}">`;
-            
-            const limitInput = document.getElementById(`edit-cat-limit-${id}`);
-            limitInput.addEventListener('input', function() {
-                if (isNaN(parseFloat(this.value))) {
-                    this.classList.add('is-invalid');
-                } else {
-                    this.classList.remove('is-invalid');
-                }
-            });
-
-            actionsCell.innerHTML = `
-                <div class="d-flex gap-1">
-                    <button class="btn btn-sm btn-success" onclick="saveCategory(${id})">Save</button>
-                    <button class="btn btn-sm btn-secondary" onclick="cancelPreviousEdit()">Cancel</button>
-                </div>
-            `;
-        }
-
-        async function saveCategory(id) {
-            const nameInput = document.getElementById(`edit-cat-name-${id}`);
-            const limitInput = document.getElementById(`edit-cat-limit-${id}`);
-            const colorInput = document.getElementById(`edit-cat-color-${id}`);
-            const isIncomeInput = document.getElementById(`edit-cat-is-income-${id}`);
-
-            if (isNaN(parseFloat(limitInput.value))) {
-                limitInput.classList.add('is-invalid');
-                return;
-            }
-
-            const limitResponse = await fetch('/categories/limit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category_id: id, month: currentMonth, limit: parseFloat(limitInput.value) })
-            });
-            
-            const renameResponse = await fetch(`/categories/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    name: nameInput.value, 
-                    color: colorInput.value,
-                    is_income: isIncomeInput.checked 
-                })
-            });
-
-            if (limitResponse.ok && renameResponse.ok) {
-                currentEditingRow = null;
-                location.reload();
-            } else {
-                alert("Error saving category.");
-            }
-        }
-
-        let categoryToDelete = null;
-        function confirmDeleteCategory(id) {
-            categoryToDelete = id;
-            if(confirm("Are you sure you want to delete this category? This will affect all months.")) {
-                deleteCategory(id);
-            }
-        }
-
-        async function deleteCategory(id) {
-            const response = await fetch(`/categories/${id}`, { method: 'DELETE' });
-            if (response.ok) location.reload();
-            else alert("Error deleting category. It may have transactions.");
-        }
-
-        function editLimit(catId) {
-            const row = document.querySelector(`tr[data-category-id="${catId}"]`);
-            row.querySelector('.limit-text').classList.add('d-none');
-            row.querySelector('.limit-input').classList.remove('d-none');
-            row.querySelector('.limit-input').focus();
-        }
-
-        async function saveLimit(catId) {
-            const row = document.querySelector(`tr[data-category-id="${catId}"]`);
-            const val = row.querySelector('.limit-input').value;
-            
-            const response = await fetch('/categories/limit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category_id: catId, month: currentMonth, limit: parseFloat(val) })
-            });
-
-            if (response.ok) {
-                location.reload();
-            }
-        }
-
-        function editRow(id) {
-            const row = document.getElementById(`row-${id}`);
-            const originalHtml = row.innerHTML;
-            cancelPreviousEdit();
-            currentEditingRow = { element: row, originalHtml: originalHtml };
-            row.classList.add('editing-row');
-            
-            const date = row.dataset.date;
-            const catId = row.dataset.category;
-            const cardId = row.dataset.card;
-            const notes = row.dataset.notes;
-            const amount = row.dataset.amountDollars;
-            const isIncome = row.dataset.isIncome === 'true';
-
-            const currentCat = categories.find(c => c.id == catId) || { id: 0, name: 'Unknown' };
-            const currentCard = cards.find(c => c.id == cardId) || { id: 0, name: 'Cash' };
-
-            row.innerHTML = `
-                <td><input type="date" id="edit-date-${id}" class="form-control form-control-sm" value="${date}"></td>
-                <td class="card-col">
-                    <div class="autocomplete-wrapper">
-                        <input type="text" id="edit-card-input-${id}" class="form-control form-control-sm" value="${currentCard.name}" placeholder="Card">
-                        <input type="hidden" id="edit-card-id-${id}" value="${cardId}">
-                    </div>
-                </td>
-                <td class="category-col">
-                    <div class="autocomplete-wrapper">
-                        <input type="text" id="edit-category-input-${id}" class="form-control form-control-sm" value="${currentCat.name}" placeholder="Cat">
-                        <input type="hidden" id="edit-category-id-${id}" value="${catId}">
-                    </div>
-                </td>
-                <td class="amount-col">
-                    <input type="number" step="0.01" id="edit-amount-${id}" class="form-control form-control-sm" value="${amount}">
-                </td>
-                <td class="notes-col"><input type="text" id="edit-notes-${id}" class="form-control form-control-sm" value="${notes}" placeholder="Notes"></td>
-                <td>
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-sm btn-success" onclick="saveRow(${id})">Save</button>
-                        <button class="btn btn-sm btn-secondary" onclick="cancelPreviousEdit()">Cancel</button>
-                    </div>
-                </td>
-            `;
-
-            new Autocomplete(document.getElementById(`edit-category-input-${id}`), categories, (item) => {
-                document.getElementById(`edit-category-id-${id}`).value = item.id;
-            });
-            new Autocomplete(document.getElementById(`edit-card-input-${id}`), cards, (item) => {
-                document.getElementById(`edit-card-id-${id}`).value = item.id;
-            });
-
-            const amountInput = document.getElementById(`edit-amount-${id}`);
-            amountInput.addEventListener('input', function() {
-                if (isNaN(parseFloat(this.value))) {
-                    this.classList.add('is-invalid');
-                } else {
-                    this.classList.remove('is-invalid');
-                }
-            });
-        }
-
-        async function saveRow(id) {
-            const dateInput = document.getElementById(`edit-date-${id}`);
-            const catIdInput = document.getElementById(`edit-category-id-${id}`);
-            const cardIdInput = document.getElementById(`edit-card-id-${id}`);
-            const amountInput = document.getElementById(`edit-amount-${id}`);
-            const notesInput = document.getElementById(`edit-notes-${id}`);
-
-            let isValid = true;
-            if (isNaN(parseFloat(amountInput.value))) {
-                amountInput.classList.add('is-invalid');
-                isValid = false;
-            } else {
-                amountInput.classList.remove('is-invalid');
-            }
-
-            if (!isValid) return;
-
-            const response = await fetch(`/budget/transaction/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    category_id: parseInt(catIdInput.value),
-                    card_id: cardIdInput.value == "0" ? null : parseInt(cardIdInput.value),
-                    transaction_date: dateInput.value,
-                    amount_dollars: parseFloat(amountInput.value),
-                    notes: notesInput.value
-                })
-            });
-
-            if (response.ok) {
-                currentEditingRow = null;
-                const newRowHtml = await response.text();
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = `<table>${newRowHtml}</table>`;
-                const newRow = tempDiv.querySelector('tr');
-                document.getElementById(`row-${id}`).replaceWith(newRow);
-                location.reload(); 
-            }
-        }
-
-        // Card Management
-        async function toggleCard(id) {
-            const card = cards.find(c => c.id == id);
-            if (!card) return;
-
-            const newState = !card.is_active;
-            const response = await fetch(`/cards/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: card.name, is_active: newState })
-            });
-
-            if (response.ok) {
-                card.is_active = newState;
-                const cardRow = document.querySelector(`button[onclick="toggleCard(${id})"]`).parentNode;
-                const span = cardRow.querySelector('span');
-                const btn = cardRow.querySelector('button');
-                
-                span.innerText = card.name + (newState ? "" : " (Inactive)");
-                btn.innerText = newState ? "Deactivate" : "Activate";
-                btn.className = `btn btn-sm ${newState ? "btn-outline-danger" : "btn-outline-success"}`;
-            } else {
-                alert('Error updating card');
-            }
-        }
-
-        async function addCard() {
-            const nameInput = document.getElementById('new-card-name');
-            const name = nameInput.value;
-            if (!name) return;
-
-            const response = await fetch('/cards', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name })
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                const newCard = { id: result.id, name: name, is_active: true };
-                cards.push(newCard);
-                
-                const list = document.getElementById('cards-list');
-                const div = document.createElement('div');
-                div.className = "d-flex justify-content-between align-items-center mb-2";
-                div.innerHTML = `
-                    <span>${name}</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="toggleCard(${result.id})">Deactivate</button>
-                `;
-                list.appendChild(div);
-                
-                nameInput.value = "";
-            } else {
-                alert('Error adding card');
-            }
-        }
-
-        // Deletion
-        let transactionToDelete = null;
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        function confirmDelete(id) { transactionToDelete = id; deleteModal.show(); }
-        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-            if (transactionToDelete) {
-                const response = await fetch('/budget/transaction/' + transactionToDelete, { method: 'DELETE' });
-                if (response.ok) location.reload();
-            }
-        });
-
-        function changeMonth(delta) {
-            const [year, month] = currentMonth.split('-').map(Number);
-            let d = new Date(year, month - 1 + delta, 1);
-            const newMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-            window.location.href = '/budget/' + newMonth;
-        }
-
-        function sortTransactions() {
-            const sortBy = document.getElementById('sort-select').value;
-            const tbody = document.getElementById('transaction-table-body');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-
-            rows.sort((a, b) => {
-                switch (sortBy) {
-                    case 'date-desc':
-                        return b.dataset.date.localeCompare(a.dataset.date);
-                    case 'date-asc':
-                        return a.dataset.date.localeCompare(b.dataset.date);
-                    case 'amount-desc':
-                        return parseFloat(b.dataset.amountDollars) - parseFloat(a.dataset.amountDollars);
-                    case 'category':
-                        const catA = a.querySelector('.category-col .badge').innerText.toLowerCase();
-                        const catB = b.querySelector('.category-col .badge').innerText.toLowerCase();
-                        return catA.localeCompare(catB);
-                    case 'card':
-                        const cardA = a.querySelector('.card-col').innerText.toLowerCase();
-                        const cardB = b.querySelector('.card-col').innerText.toLowerCase();
-                        return cardA.localeCompare(cardB);
-                    default:
-                        return 0;
-                }
-            });
-
-            rows.forEach(row => tbody.appendChild(row));
-        }
-
-        // Initialize Autocomplete for the "Add" footer rows
-        try {
-            new Autocomplete(document.getElementById('add-category-input'), categories, (item) => {
-                document.getElementById('add-category-id').value = item ? item.id : "";
-            });
-            new Autocomplete(document.getElementById('add-card-input'), cards, (item) => {
-                document.getElementById('add-card-id').value = item ? item.id : "";
-            });
-            console.log("Autocomplete initialized successfully.");
-        } catch (e) {
-            console.error("Autocomplete init failed:", e);
-        }
-
-        // Form Validation for Adding
-        document.getElementById('add-transaction-form').addEventListener('submit', function(e) {
-            const catInput = document.getElementById('add-category-input');
-            const cardInput = document.getElementById('add-card-input');
-            const catId = document.getElementById('add-category-id').value;
-            const cardId = document.getElementById('add-card-id').value;
-            const amountInput = document.querySelector('input[form="add-transaction-form"][name="amount_dollars"]');
-            
-            let isValid = true;
-            if (catInput.classList.contains('is-invalid') || !catId) {
-                isValid = false;
-                catInput.classList.add('is-invalid');
-            }
-            if (cardInput.classList.contains('is-invalid') || !cardId) {
-                isValid = false;
-                cardInput.classList.add('is-invalid');
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-                alert('Please select a valid Category and Card from the dropdown.');
-                return;
-            }
-
-            if (!amountInput || isNaN(parseFloat(amountInput.value))) {
-                if(amountInput) amountInput.classList.add('is-invalid');
-                e.preventDefault();
-            }
-        });
-
-        const addCatLimit = document.getElementById('add-category-limit');
-        addCatLimit.addEventListener('input', function() {
-            if (isNaN(parseFloat(this.value))) {
-                this.classList.add('is-invalid');
-            } else {
-                this.classList.remove('is-invalid');
-            }
-        });
-
-        document.getElementById('add-category-form').addEventListener('submit', function(e) {
-            if (isNaN(parseFloat(addCatLimit.value))) {
-                e.preventDefault();
-                addCatLimit.classList.add('is-invalid');
+            // Add Transaction Form Validation
+            const transForm = document.getElementById('add-transaction-form');
+            if (transForm) {
+                transForm.addEventListener('submit', function(e) {
+                    const catId = document.getElementById('add-category-id').value;
+                    const cardId = document.getElementById('add-card-id').value;
+                    if (!catId || !cardId) {
+                        e.preventDefault();
+                        alert('Please select a valid Category and Card.');
+                    }
+                });
             }
         });
     </script>

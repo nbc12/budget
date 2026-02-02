@@ -104,3 +104,97 @@ impl<'a> CategoryRepository<'a> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use database::get_test_db;
+    use crate::models::{CreateCategoryRequest, UpdateCategoryRequest};
+
+    #[tokio::test]
+    async fn test_create_category() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let mut repo = CategoryRepository::new(uow.connection());
+        
+        let req = CreateCategoryRequest {
+            name: "Test Category".to_string(),
+            color: "#ff0000".to_string(),
+            is_income: false,
+            is_active: true,
+        };
+        let id = repo.create(&req).await.unwrap();
+        assert!(id > 0);
+        
+        let cat = repo.find_by_id(id).await.unwrap().unwrap();
+        assert_eq!(cat.name, "Test Category");
+        assert_eq!(cat.color, "#ff0000");
+        assert!(!cat.is_income);
+        assert!(cat.is_active);
+    }
+
+    #[tokio::test]
+    async fn test_read_categories() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let mut repo = CategoryRepository::new(uow.connection());
+        
+        let initial_count = repo.list().await.unwrap().len();
+        
+        repo.create(&CreateCategoryRequest {
+            name: "Cat 1".to_string(),
+            color: "#ffffff".to_string(),
+            is_income: false,
+            is_active: true,
+        }).await.unwrap();
+        
+        let categories = repo.list().await.unwrap();
+        assert_eq!(categories.len(), initial_count + 1);
+    }
+
+    #[tokio::test]
+    async fn test_update_category() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let mut repo = CategoryRepository::new(uow.connection());
+        
+        let id = repo.create(&CreateCategoryRequest {
+            name: "Original".to_string(),
+            color: "#000000".to_string(),
+            is_income: false,
+            is_active: true,
+        }).await.unwrap();
+        
+        let update_req = UpdateCategoryRequest {
+            name: "Updated".to_string(),
+            color: Some("#ffffff".to_string()),
+            is_income: true,
+            is_active: false,
+        };
+        repo.update(id, &update_req.name, update_req.color.as_deref(), update_req.is_income, update_req.is_active).await.unwrap();
+        
+        let cat = repo.find_by_id(id).await.unwrap().unwrap();
+        assert_eq!(cat.name, "Updated");
+        assert_eq!(cat.color, "#ffffff");
+        assert!(cat.is_income);
+        assert!(!cat.is_active);
+    }
+
+    #[tokio::test]
+    async fn test_delete_category() {
+        let db = get_test_db().await;
+        let mut uow = db.begin().await.unwrap();
+        let mut repo = CategoryRepository::new(uow.connection());
+        
+        let id = repo.create(&CreateCategoryRequest {
+            name: "Delete Me".to_string(),
+            color: "#ffffff".to_string(),
+            is_income: false,
+            is_active: true,
+        }).await.unwrap();
+        
+        assert!(repo.find_by_id(id).await.unwrap().is_some());
+        repo.delete(id).await.unwrap();
+        assert!(repo.find_by_id(id).await.unwrap().is_none());
+    }
+}

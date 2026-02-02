@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 database = { workspace = true }
 common = { workspace = true }
+tokio = { workspace = true }
 axum = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

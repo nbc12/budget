@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-database = { workspace = true }
 axum = { workspace = true }
-tower-sessions = { workspace = true }
-serde = { workspace = true }
 clap = { workspace = true }
+database = { workspace = true }
+serde = { workspace = true }
+tower-sessions = { workspace = true }
+tracing = { workspace = true }
 sqlx = { workspace = true }

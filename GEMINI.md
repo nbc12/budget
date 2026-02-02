@@ -122,16 +122,14 @@ The user interface is centered around a single month view.
     *   Top controls to switch the currently viewed month.
     *   **Auto-Copy Logic:** When navigating to a new month, if no `MonthlyBudgets` exist, the system automatically copies the budget entries (category limits) from the most recent previous month.
 
-2.  **Financial Overview (Dashboard):**
+1.  **Financial Overview (Dashboard):**
     *   **Total Income:** Aggregates all income transactions.
-    *   **Tithing:** Calculated as 10% of Total Income.
     *   **Total Expenses:** Sum of all expenses.
     *   **Net Balance:** Income - Expenses.
 
 ### 2a. Virtual / Derived Categories (Service Layer)
 To support advanced tracking without complex database splits, the application implements **Virtual Categories** in the Budget Summary view.
 *   **Total Income:** Automatically summed from all positive transactions.
-*   **Tithing:** Automatically calculated as 10% of Total Income.
 *   **Split Categories (e.g., Auto Insurance):**
     *   Transactions are entered under a real category (e.g., "Car Insurance").
     *   The Budget View *virtually* splits this category into sub-buckets (e.g., "Auto (Mazda)" and "Auto (Elantra)") based on predefined rules (e.g., 50/50 split) for reporting purposes.
@@ -504,7 +502,7 @@ todo:
  - [x] **Domain: Transactions**:
     - [x] Update Model/Repo to handle `card_id`.
  - [x] **UI/UX**:
-    - [x] Implement "Financial Overview" dashboard (Income, Tithing, Expenses, Net).
+    - [x] Implement "Financial Overview" dashboard (Income, Expenses, Net).
     - [x] **Category Enhancements**:
         - [x] Add `color` column to `categories` table.
         - [x] Implement auto-assignment of pastel colors.

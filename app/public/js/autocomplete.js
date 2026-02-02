@@ -111,6 +111,14 @@ class Autocomplete {
         }
     }
 
+    updateItems(newItems) {
+        this.items = newItems;
+        if (this.listContainer) {
+            this.renderList();
+        }
+        this.validate();
+    }
+
     onKeyDown(e) {
         let x = this.listContainer;
         if (x) x = x.getElementsByTagName("div");

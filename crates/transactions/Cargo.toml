@@ -5,9 +5,10 @@ edition = "2024"
 
 [dependencies]
 database = { workspace = true }
-common = { workspace = true }
 categories = { workspace = true }
-cards = { path = "../cards" }
+cards = { path = "../../crates/cards" }
+common = { workspace = true }
+tokio = { workspace = true }
 axum = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
