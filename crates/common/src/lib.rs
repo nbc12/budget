@@ -31,7 +31,11 @@ impl Config {
 
     fn check_security(&self) {
         if self.app_password.is_none() {
-            tracing::warn!("APP_PASSWORD is not set! Authentication is DISABLED. The site will have NO login required.");
+            if cfg!(debug_assertions) {
+                tracing::warn!("APP_PASSWORD is not set! Authentication is DISABLED. The site will have NO login required.");
+            } else {
+                panic!("APP_PASSWORD is not set! Please set APP_PASSWORD to run this application.")
+            }
         }
     }
 }

@@ -42,15 +42,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Session Store
     let session_store = MemoryStore::default();
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false); // Set to true in production with HTTPS
+        .with_secure(cfg!(not(debug_assertions))); // Secure=true in Release mode
 
     // 5. Routing
     let serve_assets = ServeEmbed::<Assets>::new();
-    
-    // Diagnostic: Print embedded files
-    for file in Assets::iter() {
-        tracing::info!("Embedded file: {}", file);
-    }
 
     // Protected Routes
     // Ensure this router has the correct State type from the start
