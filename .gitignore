@@ -1,0 +1,5 @@
+/target
+budget.db
+.env
+budget_data/
+

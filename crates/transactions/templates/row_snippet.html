@@ -1,0 +1,22 @@
+<tr id="row-{{ t.id }}" 
+    data-id="{{ t.id }}" 
+    data-date="{{ t.transaction_date }}" 
+    data-category="{{ t.category_id }}" 
+    data-card="{{ t.card_id }}"
+    data-notes="{{ t.notes }}" 
+    data-amount-dollars="{{ t.amount_dollars }}"
+    data-is-income="{{ t.is_income }}">
+    <td>{{ t.transaction_date_display }}</td>
+    <td>{{ t.card_name }}</td>
+    <td>
+        <span class="badge" style="background-color: {{ t.category_color }}; color: #333; border: 1px solid #ddd;">{{ t.category_name }}</span>
+    </td>
+    <td class="{% if t.is_income %}income{% else %}expense{% endif %}">
+        ${{ t.amount_dollars }}
+    </td>
+    <td>{{ t.notes }}</td>
+    <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="editRow({{ t.id }})">Edit</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ t.id }})">Delete</button>
+    </td>
+</tr>
