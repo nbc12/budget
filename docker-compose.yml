@@ -1,0 +1,22 @@
+services:
+  budget-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: budget-app
+    # Matches your systemd Restart=always policy
+    restart: always
+    ports:
+      # Map Host Port 3000 to Container Port 3000
+      - "3000:3000"
+    environment:
+      # Injected directly from your systemd configuration
+      - PORT=3000
+      - APP_ENV=production
+      - APP_PASSWORD=${APP_PASSWORD}
+      # The internal path to the database folder we created in the Dockerfile
+      - DATABASE_URL=sqlite:///app/data/budget.db
+    volumes:
+      # This maps a local folder named 'budget_data' on your host
+      # to the '/app/data' folder inside the container.
+      - ./budget_data:/app/data

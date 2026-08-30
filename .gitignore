@@ -3,3 +3,4 @@ budget.db
 .env
 node_modules
 frontend/dist
+budget_data/
