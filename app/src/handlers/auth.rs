@@ -20,12 +20,6 @@ pub struct LoginForm {
     pub password: String,
 }
 
-pub async fn root_redirect() -> Response {
-    let now = chrono::Local::now();
-    let month = now.format("%Y-%m").to_string();
-    Redirect::to(&format!("/budget/{}", month)).into_response()
-}
-
 pub async fn login_get(
     State(state): State<Arc<AppState>>,
 ) -> Response {

@@ -4,13 +4,13 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
-    routing::{get, post, delete},
+    routing::{get, post, delete, put},
     Form, Json, Router,
 };
 use common::AppState;
 use std::sync::Arc;
 use askama::Template;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use categories::virtual_budget::VirtualBudgetService;
 
@@ -42,6 +42,7 @@ pub struct MonthViewTemplate {
     pub cards: Vec<cards::models::Card>,
 }
 
+#[derive(Serialize)]
 pub struct FinancialOverview {
     pub total_income: String,
     pub total_expenses: String,
@@ -49,7 +50,7 @@ pub struct FinancialOverview {
     pub net_is_positive: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct BudgetRowView {
     pub category_id: i64,
     pub category_name: String,
@@ -64,6 +65,7 @@ pub struct BudgetRowView {
     pub is_active: bool,
 }
 
+#[derive(Serialize)]
 pub struct VirtualCategoryView {
     pub name: String,
     pub amount_dollars: String,
@@ -76,6 +78,7 @@ pub struct TransactionRowTemplate {
     pub t: TransactionView,
 }
 
+#[derive(Serialize)]
 pub struct TransactionView {
     pub id: i64,
     pub category_id: i64,
@@ -88,6 +91,16 @@ pub struct TransactionView {
     pub amount_dollars: String,
     pub is_income: bool,
     pub notes: String,
+}
+
+#[derive(Serialize)]
+pub struct MonthViewResponse {
+    pub month: String,
+    pub month_display: String,
+    pub overview: FinancialOverview,
+    pub budget_rows: Vec<BudgetRowView>,
+    pub virtual_rows: Vec<VirtualCategoryView>,
+    pub transactions: Vec<TransactionView>,
 }
 
 #[derive(Deserialize)]
@@ -108,36 +121,37 @@ pub fn transactions_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         // Specific routes first
         .route("/add", post(create_transaction))
+        .route("/api/add", post(create_transaction_api))
         // Then parameterized routes
         .route("/{month}", get(get_month_view))
+        .route("/api/{month}", get(get_month_data))
         .route("/transaction/{id}", delete(delete_transaction).put(update_transaction))
+        .route("/api/transaction/{id}", put(update_transaction_api))
         .with_state(state)
 }
 
-async fn get_month_view(
-    State(state): State<Arc<AppState>>,
-    Path(params): Path<MonthParam>,
-) -> Result<impl IntoResponse, TransactionError> {
-    tracing::info!("Fetching month view for: {}", params.month);
-
+async fn fetch_month_data(
+    state: &Arc<AppState>,
+    month: &str,
+) -> Result<MonthViewResponse, TransactionError> {
     // 0. Ensure budgets exist for this month (Auto-Copy logic)
-    if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{}-01", params.month), "%Y-%m-%d") {
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(&format!("{}-01", month), "%Y-%m-%d") {
         let prev_date = date - chrono::Months::new(1);
         let previous_month = prev_date.format("%Y-%m").to_string();
         
-        if let Err(e) = categories::service::CategoryService::ensure_budgets_exist(&state.db, &params.month, &previous_month).await {
+        if let Err(e) = categories::service::CategoryService::ensure_budgets_exist(&state.db, month, &previous_month).await {
             tracing::warn!("Auto-copy budgets failed: {}. Continuing anyway.", e);
         }
     }
 
     // 1. Get transactions and basic summary
-    let (transactions, summary) = TransactionService::get_month_view(&state.db, &params.month).await.map_err(|e| {
+    let (transactions, summary) = TransactionService::get_month_view(&state.db, month).await.map_err(|e| {
         tracing::error!("get_month_view error: {:?}", e);
         e
     })?;
     
     // 2. Get categories and monthly budgets
-    let budget_views = categories::service::CategoryService::get_budget_view(&state.db, &params.month)
+    let budget_views = categories::service::CategoryService::get_budget_view(&state.db, month)
         .await
         .map_err(|e| {
             tracing::error!("Failed to get budget view: {}", e);
@@ -200,7 +214,7 @@ async fn get_month_view(
             remaining_dollars: format!("{:.2}", view.remaining as f64 / 100.0),
             percent_spent: format!("{:.0}", p_spent),
             percent_remaining: format!("{:.0}", p_rem),
-            is_over_budget: if view.category.is_income { view.remaining < 0 } else { view.remaining < 0 }, // Both mean we are "behind" target
+            is_over_budget: view.remaining < 0,
             is_income: view.category.is_income,
             is_active: view.category.is_active,
         });
@@ -210,17 +224,15 @@ async fn get_month_view(
     for t in &transactions {
         transactions_for_virtual.push((t.category_id, t.amount));
     }
-    // Re-calculating with the updated 'spent' data if needed for splits
-    // For now, our virtual service just takes raw transactions
+    
     let raw_budget_views = enriched_budget_rows.iter().map(|r| {
-        // Dummy conversion back for the service
         categories::models::CategoryBudgetView {
             category: categories::models::Category { 
                 id: r.category_id, 
                 name: r.category_name.clone(), 
                 color: r.category_color.clone(),
                 is_income: r.is_income,
-                is_active: true // Budget rows in this view are always active or have budget
+                is_active: true
             },
             budget: None,
             spent: (r.spent_dollars.parse::<f64>().unwrap_or(0.0) * 100.0) as i64,
@@ -274,25 +286,91 @@ async fn get_month_view(
         net_is_positive: summary.net >= 0,
     };
 
-    let month_display = chrono::NaiveDate::parse_from_str(&format!("{}-01", params.month), "%Y-%m-%d")
+    let month_display = chrono::NaiveDate::parse_from_str(&format!("{}-01", month), "%Y-%m-%d")
         .map(|d| d.format("%B %Y").to_string())
-        .unwrap_or_else(|_| params.month.clone());
+        .unwrap_or_else(|_| month.to_string());
 
+    Ok(MonthViewResponse {
+        month: month.to_string(),
+        month_display,
+        overview,
+        budget_rows: enriched_budget_rows,
+        virtual_rows,
+        transactions: transaction_views,
+    })
+}
+
+async fn get_month_view(
+    State(state): State<Arc<AppState>>,
+    Path(params): Path<MonthParam>,
+) -> Result<impl IntoResponse, TransactionError> {
+    let data = fetch_month_data(&state, &params.month).await?;
+    
+    // We still need categories and cards for the templates
+    let budget_views = categories::service::CategoryService::get_budget_view(&state.db, &params.month)
+        .await
+        .map_err(|e| TransactionError::Infrastructure(e.to_string()))?;
+    let all_cards = cards::service::CardService::list_cards(&state.db)
+        .await
+        .map_err(|e| TransactionError::Infrastructure(e.to_string()))?;
     let categories_for_template: Vec<categories::models::Category> = budget_views.into_iter().map(|v| v.category).collect();
 
     let template = MonthViewTemplate {
-        month: params.month,
-        month_display,
-        overview,
-        budget_rows: enriched_budget_rows.clone(),
-        virtual_rows,
-        transactions: transaction_views,
+        month: data.month,
+        month_display: data.month_display,
+        overview: data.overview,
+        budget_rows: data.budget_rows,
+        virtual_rows: data.virtual_rows,
+        transactions: data.transactions,
         categories: categories_for_template,
         cards: all_cards,
     };
 
     Ok(Html(template.render().map_err(|e| TransactionError::Infrastructure(e.to_string()))?))
 }
+
+async fn get_month_data(
+    State(state): State<Arc<AppState>>,
+    Path(params): Path<MonthParam>,
+) -> Result<Json<MonthViewResponse>, TransactionError> {
+    let data = fetch_month_data(&state, &params.month).await?;
+    Ok(Json(data))
+}
+
+async fn create_transaction_api(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<UpdateTransactionRequest>,
+) -> Result<impl IntoResponse, TransactionError> {
+    TransactionService::create_transaction(
+        &state.db,
+        payload.category_id,
+        payload.card_id,
+        payload.transaction_date,
+        payload.amount_dollars,
+        payload.notes,
+    ).await?;
+    
+    Ok(StatusCode::CREATED)
+}
+
+async fn update_transaction_api(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<i64>,
+    Json(payload): Json<UpdateTransactionRequest>,
+) -> Result<impl IntoResponse, TransactionError> {
+    TransactionService::update_transaction(
+        &state.db,
+        id,
+        payload.category_id,
+        payload.card_id,
+        payload.transaction_date,
+        payload.amount_dollars,
+        payload.notes,
+    ).await?;
+    
+    Ok(StatusCode::OK)
+}
+
 
 async fn create_transaction(
     State(state): State<Arc<AppState>>,

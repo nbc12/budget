@@ -13,11 +13,15 @@ use axum_embed::ServeEmbed;
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 
 mod handlers;
-use handlers::auth::{login_get, login_post, root_redirect};
+use handlers::auth::{login_get, login_post};
 
 #[derive(RustEmbed, Clone)]
 #[folder = "public/"]
 struct Assets;
+
+#[derive(RustEmbed, Clone)]
+#[folder = "../frontend/dist/"]
+struct FrontendAssets;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,14 +50,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 5. Routing
     let serve_assets = ServeEmbed::<Assets>::new();
+    let serve_frontend = ServeEmbed::<FrontendAssets>::new();
 
     // Protected Routes
     // Ensure this router has the correct State type from the start
     let protected_routes = Router::<Arc<AppState>>::new()
-        .route("/", get(root_redirect))
         .nest("/budget", transactions::handler::transactions_router(state.clone()))
         .nest("/categories", categories::handler::categories_router(state.clone()))
         .nest("/cards", cards::handler::cards_router(state.clone()))
+        // Svelte frontend (SPA) - serves index.html at "/" and its hashed assets
+        // for anything not matched by the routes above. Registered before
+        // .layer() below so it's protected by auth like everything else.
+        .fallback_service(serve_frontend)
         .layer(middleware::from_fn_with_state(state.clone(), auth_middleware));
 
     // Combined Application Router

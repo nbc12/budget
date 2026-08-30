@@ -1,3 +1,5 @@
 /target
 budget.db
 .env
+node_modules
+frontend/dist
