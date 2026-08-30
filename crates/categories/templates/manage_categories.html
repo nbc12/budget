@@ -108,12 +108,13 @@
 
         async function deleteCategory(id) {
             if (!confirm('Are you sure? This will fail if there are transactions.')) return;
-            
+
             const response = await fetch(`/categories/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 location.reload();
             } else {
-                alert('Cannot delete category. It likely has transactions. Try deactivating it instead.');
+                const body = await response.json().catch(() => null);
+                alert(body?.error || 'Cannot delete category. It likely has transactions. Try deactivating it instead.');
             }
         }
 

@@ -23,6 +23,8 @@ pub enum RepositoryError {
     UniqueViolation(String),
     #[error("Check constraint violation: {0}")]
     CheckViolation(String),
+    #[error("Foreign key constraint violation: {0}")]
+    ForeignKeyViolation(String),
 }
 
 impl From<sqlx::Error> for RepositoryError {
@@ -31,6 +33,14 @@ impl From<sqlx::Error> for RepositoryError {
             sqlx::Error::RowNotFound => RepositoryError::NotFound,
             _ => {
                 if let Some(db_err) = err.as_database_error() {
+                    // SQLite reports FK violations with a stable message ("FOREIGN KEY
+                    // constraint failed") rather than a code we can reliably match on
+                    // across sqlx/libsqlite3 versions, so key off that instead.
+                    if db_err.message().contains("FOREIGN KEY constraint failed") {
+                        return RepositoryError::ForeignKeyViolation(
+                            db_err.message().to_string(),
+                        );
+                    }
                     if let Some(code) = db_err.code() {
                         match code.as_ref() {
                             "2067" | "1555" => {
