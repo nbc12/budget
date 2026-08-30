@@ -119,7 +119,7 @@
           maintainAspectRatio: false,
           plugins: {
             title: { display: true, text: 'Individual Income Transactions' },
-            legend: { display: false }
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
           }
         }
       });
@@ -142,7 +142,7 @@
           maintainAspectRatio: false,
           plugins: {
             title: { display: true, text: 'Individual Expense Transactions' },
-            legend: { display: false }
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
           }
         }
       });
