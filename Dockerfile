@@ -3,8 +3,11 @@ FROM rust:1.93-slim AS builder
 
 WORKDIR /usr/src/workspace
 
-# Install build dependencies for SQLite and networking
-RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev
+# Install build dependencies for SQLite, networking, and the Svelte frontend
+# (build.rs shells out to npm to build frontend/ into frontend/dist/)
+RUN apt-get update && apt-get install -y pkg-config libssl-dev libsqlite3-dev curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
 
 # Copy the entire workspace
 COPY . .
