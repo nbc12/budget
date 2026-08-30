@@ -106,7 +106,8 @@
       if (res.ok) {
         fetchData();
       } else {
-        alert('Error deleting category. It may have transactions.');
+        const body = await res.json().catch(() => null);
+        alert(body?.error || 'Error deleting category. It may have transactions.');
       }
     } catch (e) {
       console.error('Delete category failed', e);

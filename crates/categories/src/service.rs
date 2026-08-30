@@ -22,6 +22,10 @@ impl From<RepositoryError> for CategoryError {
         match err {
             RepositoryError::NotFound => CategoryError::NotFound,
             RepositoryError::UniqueViolation(msg) => CategoryError::Conflict(msg),
+            RepositoryError::ForeignKeyViolation(_) => CategoryError::Conflict(
+                "Cannot delete this category: it still has transactions assigned to it. \
+                 Remove or reassign those transactions first, or deactivate the category instead.".into()
+            ),
             RepositoryError::Infrastructure(e) => CategoryError::Infrastructure(e.to_string()),
             _ => CategoryError::Infrastructure(err.to_string()),
         }
