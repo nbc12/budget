@@ -168,6 +168,13 @@
   $: filteredTransactions = data ? data.transactions.filter((t: any) => checkedCategoryIds.includes(t.category_id)) : [];
   $: filteredBudgetRows = activeBudgetRows.filter((r: any) => checkedCategoryIds.includes(r.category_id));
   $: sortedTransactions = sortTransactions(filteredTransactions, sortBy);
+  // t.amount_dollars from the API is always a positive display value (see
+  // TransactionRow), with sign carried separately in is_income - so it must
+  // be applied here too when summing.
+  $: transactionsSum = filteredTransactions.reduce((sum: number, t: any) => {
+    const amount = parseFloat(t.amount_dollars);
+    return sum + (t.is_income ? amount : -amount);
+  }, 0);
 
   function sortTransactions(transactions: any[], sortBy: string) {
     const sorted = [...transactions];
@@ -401,7 +408,10 @@
     <section>
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="h4 mb-0">Transactions</h2>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3">
+          <span class="small">
+            Total: <strong class={transactionsSum < 0 ? 'text-danger' : 'text-success'}>${transactionsSum.toFixed(2)}</strong>
+          </span>
           <span class="small text-muted">Sort by:</span>
           <select class="form-select form-select-sm" bind:value={sortBy} style="width: auto;">
             <option value="date-desc">Date (Newest)</option>
